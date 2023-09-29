@@ -237,8 +237,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--latent-dim",
         type=int,
-        default=256,
-        help="Latent dimension n_z (default: 256)",
+        default=768,
+        help="Latent dimension n_z (for compatibility with bert hidden dim: 768)",
     )
     parser.add_argument(
         "--image-size",
@@ -250,7 +250,7 @@ if __name__ == "__main__":
         "--num-codebook-vectors",
         type=int,
         default=1024,
-        help="Number of codebook vectors (default: 256)",
+        help="Number of codebook vectors",
     )
     parser.add_argument(
         "--beta",
@@ -269,9 +269,6 @@ if __name__ == "__main__":
         type=str,
         default="/data",
         help="Path to data (default: /data)",
-    )
-    parser.add_argument(
-        "--device", type=str, default="cuda", help="Which device the training is on"
     )
     parser.add_argument(
         "--batch-size",
