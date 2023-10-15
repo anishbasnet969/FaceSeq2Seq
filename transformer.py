@@ -8,6 +8,8 @@ from vqgan import VQGAN
 from transformers import BertModel, BertTokenizer
 from transformer_decoder import TransformerDecoder
 
+from datamodules.img_txt import CelebAHQImageTextDataModule
+
 
 class FaceSeq2Seq(pl.LightningModule):
     def __init__(self, args):
@@ -221,3 +223,13 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
+    faceseq2seq = FaceSeq2Seq(args)
+
+    data_module = CelebAHQImageTextDataModule(
+        image_size=args.image_size, batch_size=args.batch_size, num_workers=2
+    )
+
+    trainer = pl.Trainer()
+
+    trainer.fit(faceseq2seq, data_module)

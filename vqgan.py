@@ -10,7 +10,8 @@ from decoder import Decoder
 from codebook import Codebook
 from discriminator import Discriminator
 from losses.lpips import LPIPS
-from utils import load_data, weights_init
+from utils import weights_init
+from datamodules.img import CelebAHQImageDataModule
 
 
 class VQGAN(pl.LightningModule):
@@ -317,3 +318,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     vqgan = VQGAN(args)
+
+    data_module = CelebAHQImageDataModule(
+        image_size=args.image_size, batch_size=args.batch_size, num_workers=2
+    )
+
+    trainer = pl.Trainer()
+
+    trainer.fit(vqgan, data_module)
