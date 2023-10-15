@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
+from pytorch_lightning.loggers import TensorBoardLogger
 
 from vqgan import VQGAN
 from transformers import BertModel, BertTokenizer
@@ -149,8 +150,11 @@ class FaceSeq2Seq(pl.LightningModule):
             },
         ]
 
-        optimizer = torch.optim.AdamW(optim_groups, lr=4.5e-06, betas=(0.9, 0.95))
-        return optimizer
+        optimizer_decoder = torch.optim.AdamW(
+            optim_groups, lr=4.5e-06, betas=(0.9, 0.95)
+        )
+
+        return optimizer_decoder
 
 
 if __name__ == "__main__":
@@ -224,12 +228,14 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    logger = TensorBoardLogger("fs2s_logs", name="seq2seq_model")
+
     faceseq2seq = FaceSeq2Seq(args)
 
     data_module = CelebAHQImageTextDataModule(
         image_size=args.image_size, batch_size=args.batch_size, num_workers=2
     )
 
-    trainer = pl.Trainer()
+    trainer = pl.Trainer(logger=logger)
 
     trainer.fit(faceseq2seq, data_module)

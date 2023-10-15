@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
+from pytorch_lightning.loggers import TensorBoardLogger
 
 from encoder import Encoder
 from decoder import Decoder
@@ -317,12 +318,16 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    logger = TensorBoardLogger("fs2s_logs", name="vqgan_model")
+
     vqgan = VQGAN(args)
 
     data_module = CelebAHQImageDataModule(
         image_size=args.image_size, batch_size=args.batch_size, num_workers=2
     )
 
-    trainer = pl.Trainer()
+    trainer = pl.Trainer(
+        logger=logger,
+    )
 
     trainer.fit(vqgan, data_module)
