@@ -62,7 +62,7 @@ class FaceSeq2Seq(pl.LightningModule):
             max_length=256,
         )
 
-        encoder_output = self.transformer_encoder(tokenized_text)
+        encoder_output = self.transformer_encoder(**tokenized_text)
 
         sos_tokens = torch.ones(images.shape[0], 1) * self.sos_token
         input_indices = torch.cat((sos_tokens, indices), dim=1)
@@ -97,10 +97,11 @@ class FaceSeq2Seq(pl.LightningModule):
             max_length=256,
         )
 
-        encoder_output = self.transformer_encoder(tokenized_text)
+        encoder_output = self.transformer_encoder(**tokenized_text)
 
         for k in range(steps):
-            logits = self.transformer_decoder(x, encoder_output.last_hidden_state)
+            logits = self.transformer_decoder(
+                x, encoder_output.last_hidden_state)
             logits = logits[:, -1, :] / temperature
 
             if top_k is not None:
@@ -120,7 +121,8 @@ class FaceSeq2Seq(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         texts, imgs = batch
         logits, target = self(texts, imgs)
-        loss = F.cross_entropy(logits.reshape(-1, logits.size(-1)), target.reshape(-1))
+        loss = F.cross_entropy(
+            logits.reshape(-1, logits.size(-1)), target.reshape(-1))
         self.log(
             "train/loss", loss, prog_bar=True, logger=True, on_step=True, on_epoch=True
         )
@@ -129,7 +131,8 @@ class FaceSeq2Seq(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         texts, imgs = batch
         logits, target = self(texts, imgs)
-        loss = F.cross_entropy(logits.reshape(-1, logits.size(-1)), target.reshape(-1))
+        loss = F.cross_entropy(
+            logits.reshape(-1, logits.size(-1)), target.reshape(-1))
         self.log(
             "val/loss", loss, prog_bar=True, logger=True, on_step=True, on_epoch=True
         )
@@ -155,7 +158,8 @@ class FaceSeq2Seq(pl.LightningModule):
 
         no_decay.add("pos_emb")
 
-        param_dict = {pn: p for pn, p in self.model.transformer.named_parameters()}
+        param_dict = {pn: p for pn,
+                      p in self.model.transformer.named_parameters()}
 
         optim_groups = [
             {
@@ -216,8 +220,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--learning-rate", type=float, default=2.25e-05, help="Learning rate."
     )
-    parser.add_argument("--beta1", type=float, default=0.5, help="Adam beta param.")
-    parser.add_argument("--beta2", type=float, default=0.9, help="Adam beta param.")
+    parser.add_argument("--beta1", type=float, default=0.5,
+                        help="Adam beta param.")
+    parser.add_argument("--beta2", type=float, default=0.9,
+                        help="Adam beta param.")
     parser.add_argument(
         "--disc-start", type=int, default=10000, help="When to start the discriminator."
     )
