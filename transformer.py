@@ -20,7 +20,9 @@ class FaceSeq2Seq(pl.LightningModule):
 
         self.vqgan = self.load_vqgan(args)
 
-        self.transformer_encoder = BertModel.from_pretrained("bert-base-uncased")
+        self.tokenizer = BertTokenizer.from_pretrained("bert-base-cased")
+
+        self.transformer_encoder = BertModel.from_pretrained("bert-base-cased")
         embedding_dim = self.transformer_encoder.config.hidden_size
 
         self.transformer_decoder = TransformerDecoder(
@@ -49,8 +51,16 @@ class FaceSeq2Seq(pl.LightningModule):
         images = self.vqgan.decode(ix_to_vectors)
         return images
 
-    def forward(self, tokenized_text, images):
+    def forward(self, texts, images):
         _, indices = self.encode_to_z(images)
+
+        tokenized_text = self.tokenizer(
+            texts,
+            return_tensors="pt",
+            truncation=True,
+            padding="max_length",
+            max_length=256,
+        )
 
         encoder_output = self.transformer_encoder(tokenized_text)
 
@@ -72,12 +82,20 @@ class FaceSeq2Seq(pl.LightningModule):
         return out
 
     @torch.no_grad()
-    def sample(self, tokenized_text, x, steps, temperature=1.0, top_k=100):
+    def sample(self, texts, steps, temperature=1.0, top_k=100):
         self.transformer_encoder.eval()
         self.transformer_decoder.eval()
 
-        sos_tokens = torch.ones(x.shape[0], 1) * self.sos_token
-        x = torch.cat((sos_tokens, x), dim=1)
+        sos_tokens = torch.ones(len(texts), 1) * self.sos_token
+        x = sos_tokens
+
+        tokenized_text = self.tokenizer(
+            texts,
+            return_tensors="pt",
+            truncation=True,
+            padding="max_length",
+            max_length=256,
+        )
 
         encoder_output = self.transformer_encoder(tokenized_text)
 
@@ -100,8 +118,8 @@ class FaceSeq2Seq(pl.LightningModule):
         return x
 
     def training_step(self, batch, batch_idx):
-        tokenized_text, imgs = batch
-        logits, target = self(tokenized_text, imgs)
+        texts, imgs = batch
+        logits, target = self(texts, imgs)
         loss = F.cross_entropy(logits.reshape(-1, logits.size(-1)), target.reshape(-1))
         self.log(
             "train/loss", loss, prog_bar=True, logger=True, on_step=True, on_epoch=True
@@ -109,8 +127,8 @@ class FaceSeq2Seq(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        tokenized_text, imgs = batch
-        logits, target = self(tokenized_text, imgs)
+        texts, imgs = batch
+        logits, target = self(texts, imgs)
         loss = F.cross_entropy(logits.reshape(-1, logits.size(-1)), target.reshape(-1))
         self.log(
             "val/loss", loss, prog_bar=True, logger=True, on_step=True, on_epoch=True
