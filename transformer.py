@@ -20,9 +20,9 @@ class FaceSeq2Seq(pl.LightningModule):
 
         self.vqgan = self.load_vqgan(args)
 
-        self.tokenizer = BertTokenizer.from_pretrained("bert-base-cased")
+        self.tokenizer = BertTokenizer.from_pretrained("roberta-base")
 
-        self.transformer_encoder = BertModel.from_pretrained("bert-base-cased")
+        self.transformer_encoder = BertModel.from_pretrained("roberta-base")
         embedding_dim = self.transformer_encoder.config.hidden_size
 
         self.transformer_decoder = TransformerDecoder(
