@@ -27,8 +27,6 @@ class VQGAN(pl.LightningModule):
         self.discriminator.apply(weights_init)
         self.perceptual_loss = LPIPS().eval()
 
-        self.prepare_training()
-
     def forward(self, imgs):
         encoded_images = self.encoder(imgs)
         quant_conv_encoded_images = self.quant_conv(encoded_images)
@@ -80,15 +78,15 @@ class VQGAN(pl.LightningModule):
         imgs = batch[0]
         decoded_images, _, q_loss = self(imgs)
 
-        perceptual_loss = self.perceptual_loss(imgs, decoded_images)
-        rec_loss = torch.abs(imgs - decoded_images)
-        perceptual_rec_loss = (
-            args.perceptual_loss_factor * perceptual_loss
-            + args.rec_loss_factor * rec_loss
-        )
-        perceptual_rec_loss = perceptual_rec_loss.mean()
-
         if optimizer_idx == 0:
+            perceptual_loss = self.perceptual_loss(imgs, decoded_images)
+            rec_loss = torch.abs(imgs - decoded_images)
+            perceptual_rec_loss = (
+                args.perceptual_loss_factor * perceptual_loss
+                + args.rec_loss_factor * rec_loss
+            )
+            perceptual_rec_loss = perceptual_rec_loss.mean()
+
             logits_fake = self.discriminator(decoded_images)
             g_loss = -torch.mean(logits_fake)
 
@@ -267,28 +265,16 @@ if __name__ == "__main__":
         help="Number of channels of images (default: 3)",
     )
     parser.add_argument(
-        "--dataset-path",
-        type=str,
-        default="/data",
-        help="Path to data (default: /data)",
-    )
-    parser.add_argument(
         "--batch-size",
         type=int,
-        default=6,
-        help="Input batch size for training (default: 6)",
-    )
-    parser.add_argument(
-        "--epochs",
-        type=int,
-        default=100,
-        help="Number of epochs to train (default: 50)",
+        default=4,
+        help="Input batch size for training (default: 4)",
     )
     parser.add_argument(
         "--learning-rate",
         type=float,
-        default=2.25e-05,
-        help="Learning rate (default: 0.0002)",
+        default=4.5e-04,
+        help="Learning rate",
     )
     parser.add_argument(
         "--beta1", type=float, default=0.5, help="Adam beta param (default: 0.0)"
@@ -302,7 +288,7 @@ if __name__ == "__main__":
         default=10000,
         help="When to start the discriminator (default: 0)",
     )
-    parser.add_argument("--disc-factor", type=float, default=1.0, help="")
+    parser.add_argument("--disc-factor", type=float, default=1.0, help="Discriminator weighing factor")
     parser.add_argument(
         "--rec-loss-factor",
         type=float,
@@ -323,11 +309,13 @@ if __name__ == "__main__":
     vqgan = VQGAN(args)
 
     data_module = CelebAHQImageDataModule(
-        image_size=args.image_size, batch_size=args.batch_size, num_workers=2
+        image_size=args.image_size, batch_size=args.batch_size, num_workers=4
     )
 
     trainer = pl.Trainer(
         logger=logger,
+        accelerator="gpu",
+        devices="auto"
     )
 
     trainer.fit(vqgan, data_module)

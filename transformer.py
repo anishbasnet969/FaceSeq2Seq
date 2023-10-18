@@ -32,7 +32,7 @@ class FaceSeq2Seq(pl.LightningModule):
     @staticmethod
     def load_vqgan(args):
         model = VQGAN(args)
-        model.load_checkpoint(args.checkpoint_path)
+        model.load_from_checkpoint(args.checkpoint_path)
         model = model.eval()
         return model
 
@@ -173,7 +173,7 @@ class FaceSeq2Seq(pl.LightningModule):
         ]
 
         optimizer_decoder = torch.optim.AdamW(
-            optim_groups, lr=4.5e-06, betas=(0.9, 0.95)
+            optim_groups, lr=4.5e-04, betas=(0.9, 0.95)
         )
 
         return optimizer_decoder
@@ -193,6 +193,7 @@ if __name__ == "__main__":
         default=1024,
         help="Number of codebook vectors.",
     )
+    parser.add_argument("--block-size", type=int, default=256, help="Transformer Decoder Block Size")
     parser.add_argument(
         "--beta", type=float, default=0.25, help="Commitment loss scalar."
     )
@@ -218,7 +219,7 @@ if __name__ == "__main__":
         "--epochs", type=int, default=100, help="Number of epochs to train."
     )
     parser.add_argument(
-        "--learning-rate", type=float, default=2.25e-05, help="Learning rate."
+        "--learning-rate", type=float, default=4.5e-04, help="Learning rate."
     )
     parser.add_argument("--beta1", type=float, default=0.5,
                         help="Adam beta param.")
@@ -260,6 +261,6 @@ if __name__ == "__main__":
         image_size=args.image_size, batch_size=args.batch_size, num_workers=2
     )
 
-    trainer = pl.Trainer(logger=logger)
+    trainer = pl.Trainer(logger=logger, accelerator="gpu", devices="auto")
 
     trainer.fit(faceseq2seq, data_module)
