@@ -30,7 +30,7 @@ class ResidualBlock(nn.Module):
             nn.Conv2d(in_channels, out_channels, 3, 1, 1),
             GroupNorm(out_channels),
             Swish(),
-            nn.Conv2d(out_channels, out_channels, 3, 1, 1),
+            nn.Conv2d(out_channels, out_channels, 3, 1, 1)
         )
 
         if in_channels != out_channels:

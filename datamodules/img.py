@@ -1,5 +1,4 @@
 import os
-from typing import Any
 import numpy as np
 import albumentations
 from PIL import Image
@@ -39,8 +38,8 @@ class ImagePaths(Dataset):
 class CelebAHQTrainImage(Dataset):
     def __init__(self, size):
         super().__init__()
-        root = "dataset/image"
-        with open("data/celebahqtrain.txt", "r") as f:
+        root = "dataset\image"
+        with open("data\celebahqtrain.txt", "r") as f:
             relpaths = f.read().splitlines()
         paths = [os.path.join(root, relpath) for relpath in relpaths]
         self.data = ImagePaths(paths=paths, size=size)
@@ -56,8 +55,8 @@ class CelebAHQTrainImage(Dataset):
 class CelebAHQValidationImage(Dataset):
     def __init__(self, size):
         super().__init__()
-        root = "dataset/image"
-        with open("data/celebahqvalidation.txt", "r") as f:
+        root = "dataset\image"
+        with open("data\celebahqvalidation.txt", "r") as f:
             relpaths = f.read().splitlines()
         paths = [os.path.join(root, relpath) for relpath in relpaths]
         self.data = ImagePaths(paths=paths, size=size)

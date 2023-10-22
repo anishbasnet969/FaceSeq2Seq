@@ -3,3 +3,4 @@ dataset/
 env/
 vgg_lpips/
 .vscode/
+fs2s_logs/

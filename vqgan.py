@@ -1,4 +1,3 @@
-import os
 import argparse
 import torch
 import torch.nn as nn
@@ -27,6 +26,10 @@ class VQGAN(pl.LightningModule):
         self.discriminator.apply(weights_init)
         self.perceptual_loss = LPIPS().eval()
 
+        self.automatic_optimization = False
+
+        self.args = args
+
     def forward(self, imgs):
         encoded_images = self.encoder(imgs)
         quant_conv_encoded_images = self.quant_conv(encoded_images)
@@ -51,18 +54,23 @@ class VQGAN(pl.LightningModule):
         decoded_images = self.decoder(post_quant_conv_mapping)
         return decoded_images
 
-    def calculate_lambda(self, perceptual_loss, gan_loss):
-        last_layer = self.decoder.model[-1]
-        last_layer_weight = last_layer.weight
-        perceptual_loss_grads = torch.autograd.grad(
-            perceptual_loss, last_layer_weight, retain_graph=True
-        )[0]
-        gan_loss_grads = torch.autograd.grad(
-            gan_loss, last_layer_weight, retain_graph=True
-        )[0]
+    def calculate_lambda(self, nll_loss, g_loss):
+        try: 
+            last_layer = self.decoder.model[-1]
+            last_layer_weight = last_layer.weight
 
-        λ = torch.norm(perceptual_loss_grads) / (torch.norm(gan_loss_grads) + 1e-4)
-        λ = torch.clamp(λ, 0, 1e4).detach()
+            nll_loss_grads = torch.autograd.grad(
+                nll_loss, last_layer_weight, retain_graph=True
+            )[0]
+            g_loss_grads = torch.autograd.grad(
+                g_loss, last_layer_weight, retain_graph=True
+            )[0]
+
+            λ = torch.norm(nll_loss_grads) / (torch.norm(g_loss_grads) + 1e-4)
+            λ = torch.clamp(λ, 0, 1e4).detach()
+        except RuntimeError:
+            assert not self.training
+            λ = torch.tensor(0.0)
         return 0.8 * λ
 
     @staticmethod
@@ -71,106 +79,100 @@ class VQGAN(pl.LightningModule):
             disc_factor = value
         return disc_factor
 
-    def load_checkpoint(self, path):
-        self.load_state_dict(torch.load(path))
-
-    def training_step(self, batch, batch_idx, optimizer_idx):
-        imgs = batch[0]
+    def training_step(self, batch, batch_idx):
+        imgs = batch
         decoded_images, _, q_loss = self(imgs)
 
-        if optimizer_idx == 0:
-            perceptual_loss = self.perceptual_loss(imgs, decoded_images)
-            rec_loss = torch.abs(imgs - decoded_images)
-            perceptual_rec_loss = (
-                args.perceptual_loss_factor * perceptual_loss
-                + args.rec_loss_factor * rec_loss
-            )
-            perceptual_rec_loss = perceptual_rec_loss.mean()
-
-            logits_fake = self.discriminator(decoded_images)
-            g_loss = -torch.mean(logits_fake)
-
-            λ = self.vqgan.calculate_lambda(perceptual_rec_loss, g_loss)
-            disc_factor = self.vqgan.adopt_weight(
-                args.disc_factor, self.global_step, threshold=args.disc_start
-            )
-            vq_loss = perceptual_rec_loss + q_loss + disc_factor * λ * g_loss
-
-            self.log(
-                "train/vqloss",
-                vq_loss,
-                prog_bar=True,
-                logger=True,
-                on_step=True,
-                on_epoch=True,
-            )
-            log_dict_vq = {
-                "train/total_loss": vq_loss.clone().detach().mean(),
-                "train/q_loss": q_loss.detach().mean(),
-                "train/perceptual_rec_loss": perceptual_rec_loss.detach().mean(),
-                "train/rec_loss": rec_loss.detach().mean(),
-                "train/perceptual_loss": perceptual_loss.detach().mean(),
-                "train/disc_weight": λ.detach(),
-                "train/disc_factor": disc_factor.detach(),
-                "train/g_loss": g_loss.detach().mean(),
-            }
-            self.log_dict(
-                log_dict_vq, prog_bar=False, logger=True, on_step=True, on_epoch=True
-            )
-            return vq_loss
-
-        if optimizer_idx == 1:
-            logits_real = self.discriminator(imgs)
-            logits_fake = self.discriminator(decoded_images)
-
-            disc_factor = self.vqgan.adopt_weight(
-                args.disc_factor, self.global_step, threshold=args.disc_start
-            )
-            d_loss_real = torch.mean(F.relu(1.0 - logits_real))
-            d_loss_fake = torch.mean(F.relu(1.0 + logits_fake))
-            disc_loss = disc_factor * 0.5 * (d_loss_real + d_loss_fake)
-
-            self.log(
-                "train/discloss",
-                disc_loss,
-                prog_bar=True,
-                logger=True,
-                on_step=True,
-                on_epoch=True,
-            )
-            log_dict_disc = {
-                "train/disc_loss": disc_loss.clone().detach().mean(),
-                "train/logits_real": logits_real.detach().mean(),
-                "train/logits_fake": logits_fake.detach().mean(),
-            }
-            self.log_dict(
-                log_dict_disc, prog_bar=False, logger=True, on_step=True, on_epoch=True
-            )
-
-            return disc_loss
-
-    def validation_step(self, batch, batch_idx):
-        imgs = batch[0]
-        decoded_images, _, q_loss = self(imgs)
+        opt_vq, opt_disc = self.optimizers()
 
         logits_real = self.discriminator(imgs)
         logits_fake = self.discriminator(decoded_images)
 
-        disc_factor = self.vqgan.adopt_weight(
-            args.disc_factor, self.global_step, threshold=args.disc_start
+        disc_factor = self.adopt_weight(
+            self.args.disc_factor, self.global_step, threshold=self.args.disc_start
         )
 
         perceptual_loss = self.perceptual_loss(imgs, decoded_images)
         rec_loss = torch.abs(imgs - decoded_images)
         perceptual_rec_loss = (
-            args.perceptual_loss_factor * perceptual_loss
-            + args.rec_loss_factor * rec_loss
+            self.args.perceptual_loss_factor * perceptual_loss
+            + self.args.rec_loss_factor * rec_loss
         )
-        perceptual_rec_loss = perceptual_rec_loss.mean()
+        nll_loss = perceptual_rec_loss.mean()
         g_loss = -torch.mean(logits_fake)
 
-        λ = self.vqgan.calculate_lambda(perceptual_rec_loss, g_loss)
-        vq_loss = perceptual_rec_loss + q_loss + disc_factor * λ * g_loss
+        λ = self.calculate_lambda(nll_loss, g_loss)
+        vq_loss = nll_loss + q_loss + disc_factor * λ * g_loss
+
+        d_loss_real = torch.mean(F.relu(1.0 - logits_real))
+        d_loss_fake = torch.mean(F.relu(1.0 + logits_fake))
+        disc_loss = disc_factor * 0.5 * (d_loss_real + d_loss_fake)
+
+        self.log(
+            "train/vqloss",
+            vq_loss,
+            prog_bar=True,
+            logger=True,
+            on_step=True,
+            on_epoch=True,
+        )
+        self.log(
+            "train/discloss",
+            disc_loss,
+            prog_bar=True,
+            logger=True,
+            on_step=True,
+            on_epoch=True,
+        )
+        log_dict = {
+            "train/total_loss": vq_loss.clone().detach().mean(),
+            "train/q_loss": q_loss.detach().mean(),
+            "train/nll_loss": nll_loss.detach().mean(),
+            "train/perceptual_rec_loss": perceptual_rec_loss.detach().mean(),
+            "train/rec_loss": rec_loss.detach().mean(),
+            "train/perceptual_loss": perceptual_loss.detach().mean(),
+            "train/disc_weight": λ.detach(),
+            "train/disc_factor": torch.tensor(disc_factor),
+            "train/g_loss": g_loss.detach().mean(),
+            "train/disc_loss": disc_loss.clone().detach().mean(),
+            "train/logits_real": logits_real.detach().mean(),
+            "train/logits_fake": logits_fake.detach().mean(),
+        }
+        self.log_dict(
+            log_dict, prog_bar=False, logger=True, on_step=True, on_epoch=True
+        )
+
+        opt_vq.zero_grad()
+        vq_loss.backward(retain_graph=True)
+
+        opt_disc.zero_grad()
+        disc_loss.backward()
+
+        opt_vq.step()
+        opt_disc.step()
+
+    def validation_step(self, batch, batch_idx):
+        imgs = batch
+        decoded_images, _, q_loss = self(imgs)
+
+        logits_real = self.discriminator(imgs)
+        logits_fake = self.discriminator(decoded_images)
+
+        disc_factor = self.adopt_weight(
+            self.args.disc_factor, self.global_step, threshold=self.args.disc_start
+        )
+
+        perceptual_loss = self.perceptual_loss(imgs, decoded_images)
+        rec_loss = torch.abs(imgs - decoded_images)
+        perceptual_rec_loss = (
+            self.args.perceptual_loss_factor * perceptual_loss
+            + self.args.rec_loss_factor * rec_loss
+        )
+        nll_loss = perceptual_rec_loss.mean()
+        g_loss = -torch.mean(logits_fake)
+
+        λ = self.calculate_lambda(perceptual_rec_loss, g_loss)
+        vq_loss = nll_loss + q_loss + disc_factor * λ * g_loss
 
         d_loss_real = torch.mean(F.relu(1.0 - logits_real))
         d_loss_fake = torch.mean(F.relu(1.0 + logits_fake))
@@ -194,42 +196,39 @@ class VQGAN(pl.LightningModule):
             on_epoch=True,
             sync_dist=True,
         )
-        log_dict_vq = {
+        log_dict = {
             "val/total_loss": vq_loss.clone().detach().mean(),
             "val/q_loss": q_loss.detach().mean(),
-            "val/perceptual_rec_loss": perceptual_rec_loss.detach().mean(),
+            "val/nll_loss": nll_loss.detach().mean(),
             "val/rec_loss": rec_loss.detach().mean(),
             "val/perceptual_loss": perceptual_loss.detach().mean(),
             "val/disc_weight": λ.detach(),
-            "val/disc_factor": disc_factor.detach(),
+            "val/disc_factor": torch.tensor(disc_factor),
             "val/g_loss": g_loss.detach().mean(),
+            "val/disc_loss": disc_loss.clone().detach().mean(),
+            "val/logits_real": logits_real.detach().mean(),
+            "val/logits_fake": logits_fake.detach().mean(),
         }
-        log_dict_disc = {
-            "train/disc_loss": disc_loss.clone().detach().mean(),
-            "train/logits_real": logits_real.detach().mean(),
-            "train/logits_fake": logits_fake.detach().mean(),
-        }
-        self.log(log_dict_vq)
-        self.log(log_dict_disc)
+        self.log_dict(log_dict, prog_bar=False, logger=True, on_step=True, on_epoch=True)
         return self.log_dict
 
-    def configure_optimizers(self, args):
-        lr = args.learning_rate
+    def configure_optimizers(self):
+        lr = self.args.learning_rate
 
         opt_vq = torch.optim.Adam(
             list(self.encoder.parameters())
             + list(self.decoder.parameters())
-            + list(self.quantize.parameters())
+            + list(self.codebook.parameters())
             + list(self.quant_conv.parameters())
             + list(self.post_quant_conv.parameters()),
             lr=lr,
-            betas=(args.beta1, args.beta2),
+            betas=(self.args.beta1, self.args.beta2),
         )
         opt_disc = torch.optim.Adam(
-            self.discriminator.parameters(), lr=lr, betas=(args.beta1, args.beta2)
+            self.discriminator.parameters(), lr=lr, betas=(self.args.beta1, self.args.beta2)
         )
 
-        return [opt_vq, opt_disc], []
+        return [opt_vq, opt_disc]
 
 
 if __name__ == "__main__":
@@ -314,8 +313,9 @@ if __name__ == "__main__":
 
     trainer = pl.Trainer(
         logger=logger,
-        accelerator="gpu",
-        devices="auto"
+        accelerator="cpu",
+        devices="auto",
+        max_epochs=-1
     )
 
-    trainer.fit(vqgan, data_module)
+    trainer.fit(vqgan, datamodule=data_module)
