@@ -6,7 +6,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.loggers import TensorBoardLogger
 
 from vqgan import VQGAN
-from transformers import BertModel, BertTokenizer
+from transformers import RobertaModel, RobertaTokenizer
 from transformer_decoder import TransformerDecoder
 
 from datamodules.img_txt import CelebAHQImageTextDataModule
@@ -20,9 +20,9 @@ class FaceSeq2Seq(pl.LightningModule):
 
         self.vqgan = self.load_vqgan(args)
 
-        self.tokenizer = BertTokenizer.from_pretrained("roberta-base")
+        self.tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
 
-        self.transformer_encoder = BertModel.from_pretrained("roberta-base")
+        self.transformer_encoder = RobertaModel.from_pretrained("roberta-base")
         embedding_dim = self.transformer_encoder.config.hidden_size
 
         self.transformer_decoder = TransformerDecoder(
@@ -32,7 +32,7 @@ class FaceSeq2Seq(pl.LightningModule):
     @staticmethod
     def load_vqgan(args):
         model = VQGAN(args)
-        model.load_from_checkpoint(args.checkpoint_path)
+        # model = VQGAN.load_from_checkpoint(args.checkpoint_path)
         model = model.eval()
         return model
 
@@ -68,7 +68,7 @@ class FaceSeq2Seq(pl.LightningModule):
         input_indices = torch.cat((sos_tokens, indices), dim=1)
 
         logits = self.transformer_decoder(
-            input_indices[:, :-1], encoder_output.last_hidden_state
+            input_indices[:, :-1].long(), encoder_output.last_hidden_state
         )
 
         target = indices
@@ -159,7 +159,7 @@ class FaceSeq2Seq(pl.LightningModule):
         no_decay.add("pos_emb")
 
         param_dict = {pn: p for pn,
-                      p in self.model.transformer.named_parameters()}
+                      p in self.transformer_decoder.named_parameters()}
 
         optim_groups = [
             {
@@ -261,6 +261,6 @@ if __name__ == "__main__":
         image_size=args.image_size, batch_size=args.batch_size, num_workers=2
     )
 
-    trainer = pl.Trainer(logger=logger, accelerator="gpu", devices="auto")
+    trainer = pl.Trainer(logger=logger, accelerator="cpu", devices="auto", max_epochs=-1)
 
     trainer.fit(faceseq2seq, data_module)

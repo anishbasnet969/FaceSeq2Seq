@@ -42,11 +42,11 @@ class ImageTextPaths(Dataset):
 
 
 class CelebAHQTrainImageText(Dataset):
-    def __init__(self, image_size, captions_file):
+    def __init__(self, image_size):
         super().__init__()
-        root = "dataset/image"
-        captions_file = "dataset/text/captions_hq.json"
-        with open("data/celebahqtrain.txt", "r") as f:
+        root = "dataset\image"
+        captions_file = "dataset\captions_hq.json"
+        with open("data\celebahqtrain.txt", "r") as f:
             relpaths = f.read().splitlines()
         paths = [os.path.join(root, relpath) for relpath in relpaths]
         self.data = ImageTextPaths(
@@ -61,14 +61,14 @@ class CelebAHQTrainImageText(Dataset):
 
 
 class CelebAHQValidationImageText(Dataset):
-    def __init__(self, size):
+    def __init__(self, image_size):
         super().__init__()
-        root = "dataset/image"
-        captions_file = "dataset/text/captions_hq.json"
-        with open("data/celebahqvalidation.txt", "r") as f:
+        root = "dataset\image"
+        captions_file = "dataset\captions_hq.json"
+        with open("data\celebahqvalidation.txt", "r") as f:
             relpaths = f.read().splitlines()
         paths = [os.path.join(root, relpath) for relpath in relpaths]
-        self.data = ImageTextPaths(paths=paths, captions_file=captions_file, size=size)
+        self.data = ImageTextPaths(paths=paths, captions_file=captions_file, size=image_size)
 
     def __len__(self):
         return len(self.data)
@@ -86,8 +86,8 @@ class CelebAHQImageTextDataModule(pl.LightningDataModule):
         self.image_size = image_size
 
     def setup(self, stage):
-        self.train_dataset = CelebAHQTrainImageText(size=self.image_size)
-        self.val_dataset = CelebAHQValidationImageText(size=self.image_size)
+        self.train_dataset = CelebAHQTrainImageText(image_size=self.image_size)
+        self.val_dataset = CelebAHQValidationImageText(image_size=self.image_size)
 
     def train_dataloader(self):
         return DataLoader(
