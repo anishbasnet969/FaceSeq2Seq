@@ -11,15 +11,15 @@ class TransformerDecoder(nn.Module):
 
         self.decoder_layer = nn.TransformerDecoderLayer(
             d_model=embed_size,
-            nhead=12,
-            dim_feedforward=3072,
+            nhead=16,
+            dim_feedforward=4096,
             dropout=0.1,
             activation="gelu",
             batch_first=True,
             norm_first=True,
         )
 
-        self.decoder = nn.TransformerDecoder(self.decoder_layer, num_layers=12)
+        self.decoder = nn.TransformerDecoder(self.decoder_layer, num_layers=24)
 
         self.ln_f = nn.LayerNorm(embed_size)
         self.head = nn.Linear(embed_size, vocab_size, bias=False)

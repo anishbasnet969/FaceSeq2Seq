@@ -1,18 +1,17 @@
-import argparse
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
-from pytorch_lightning.loggers import TensorBoardLogger
+
+from torchmetrics.image.fid import FrechetInceptionDistance
+from metrics.fs_metrics import FaceSemanticMetrics
 
 from vqgan import VQGAN
 from transformers import RobertaModel, RobertaTokenizer
 from transformer_decoder import TransformerDecoder
 
-from datamodules.img_txt import CelebAHQImageTextDataModule
 
-
-class FaceSeq2Seq(pl.LightningModule):
+class CrossFace(pl.LightningModule):
     def __init__(self, args):
         super().__init__()
 
@@ -20,14 +19,17 @@ class FaceSeq2Seq(pl.LightningModule):
 
         self.vqgan = self.load_vqgan(args)
 
-        self.tokenizer = RobertaTokenizer.from_pretrained("roberta-base")
+        self.tokenizer = RobertaTokenizer.from_pretrained("roberta-large")
 
-        self.transformer_encoder = RobertaModel.from_pretrained("roberta-base")
+        self.transformer_encoder = RobertaModel.from_pretrained("roberta-large")
         embedding_dim = self.transformer_encoder.config.hidden_size
 
         self.transformer_decoder = TransformerDecoder(
             args.num_codebook_vectors, embedding_dim, args.block_size
         )
+
+        self.fid = FrechetInceptionDistance(feature=2048)
+        self.fs_metrics = FaceSemanticMetrics()
 
     @staticmethod
     def load_vqgan(args):
@@ -100,8 +102,7 @@ class FaceSeq2Seq(pl.LightningModule):
         encoder_output = self.transformer_encoder(**tokenized_text)
 
         for k in range(steps):
-            logits = self.transformer_decoder(
-                x, encoder_output.last_hidden_state)
+            logits = self.transformer_decoder(x, encoder_output.last_hidden_state)
             logits = logits[:, -1, :] / temperature
 
             if top_k is not None:
@@ -121,8 +122,7 @@ class FaceSeq2Seq(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         texts, imgs = batch
         logits, target = self(texts, imgs)
-        loss = F.cross_entropy(
-            logits.reshape(-1, logits.size(-1)), target.reshape(-1))
+        loss = F.cross_entropy(logits.reshape(-1, logits.size(-1)), target.reshape(-1))
         self.log(
             "train/loss", loss, prog_bar=True, logger=True, on_step=True, on_epoch=True
         )
@@ -131,12 +131,39 @@ class FaceSeq2Seq(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         texts, imgs = batch
         logits, target = self(texts, imgs)
-        loss = F.cross_entropy(
-            logits.reshape(-1, logits.size(-1)), target.reshape(-1))
+        loss = F.cross_entropy(logits.reshape(-1, logits.size(-1)), target.reshape(-1))
         self.log(
             "val/loss", loss, prog_bar=True, logger=True, on_step=True, on_epoch=True
         )
         return loss
+
+    def test_step(self, batch, batch_idx):
+        texts, imgs = batch
+
+        sampled_indices = self.sample(texts, steps=256)
+        generated_imgs = self.z_to_image(sampled_indices)
+
+        resized_generated_imgs = F.interpolate(
+            generated_imgs, size=(299, 299), mode="bicubic", antialias=True
+        )
+        resized_real_imgs = F.interpolate(
+            imgs, size=(299, 299), mode="bicubic", antialias=True
+        )
+
+        self.fid.update(resized_generated_imgs, real=False)
+        self.fid.update(resized_real_imgs, real=True)
+        self.fs_metrics.update(resized_generated_imgs, resized_real_imgs)
+
+    def on_test_epoch_end(self, outputs):
+        fid_score = self.fid.compute()
+        fsd, fss, cos_sim = self.fs_metrics.compute()
+        log_dict = {
+            "test/fid": fid_score.detach(),
+            "test/fsd": fsd.detach(),
+            "test/fss": fss.detach(),
+            "test/cos_sim": cos_sim.detach(),
+        }
+        self.log_dict(log_dict, logger=True, on_epoch=True, prog_bar=True)
 
     def configure_optimizers(self):
         decay, no_decay = set(), set()
@@ -158,8 +185,7 @@ class FaceSeq2Seq(pl.LightningModule):
 
         no_decay.add("pos_emb")
 
-        param_dict = {pn: p for pn,
-                      p in self.transformer_decoder.named_parameters()}
+        param_dict = {pn: p for pn, p in self.transformer_decoder.named_parameters()}
 
         optim_groups = [
             {
@@ -177,90 +203,3 @@ class FaceSeq2Seq(pl.LightningModule):
         )
 
         return optimizer_decoder
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="FaceSeq2Seq")
-    parser.add_argument(
-        "--latent-dim", type=int, default=768, help="Latent dimension n_z."
-    )
-    parser.add_argument(
-        "--image-size", type=int, default=256, help="Image height and width.)"
-    )
-    parser.add_argument(
-        "--num-codebook-vectors",
-        type=int,
-        default=1024,
-        help="Number of codebook vectors.",
-    )
-    parser.add_argument("--block-size", type=int, default=256, help="Transformer Decoder Block Size")
-    parser.add_argument(
-        "--beta", type=float, default=0.25, help="Commitment loss scalar."
-    )
-    parser.add_argument(
-        "--image-channels", type=int, default=3, help="Number of channels of images."
-    )
-    parser.add_argument(
-        "--dataset-path", type=str, default="./data", help="Path to data."
-    )
-    parser.add_argument(
-        "--checkpoint-path",
-        type=str,
-        default="./checkpoints/last_ckpt.pt",
-        help="Path to checkpoint.",
-    )
-    parser.add_argument(
-        "--device", type=str, default="cuda", help="Which device the training is on"
-    )
-    parser.add_argument(
-        "--batch-size", type=int, default=20, help="Input batch size for training."
-    )
-    parser.add_argument(
-        "--epochs", type=int, default=100, help="Number of epochs to train."
-    )
-    parser.add_argument(
-        "--learning-rate", type=float, default=4.5e-04, help="Learning rate."
-    )
-    parser.add_argument("--beta1", type=float, default=0.5,
-                        help="Adam beta param.")
-    parser.add_argument("--beta2", type=float, default=0.9,
-                        help="Adam beta param.")
-    parser.add_argument(
-        "--disc-start", type=int, default=10000, help="When to start the discriminator."
-    )
-    parser.add_argument(
-        "--disc-factor",
-        type=float,
-        default=1.0,
-        help="Weighting factor for the Discriminator.",
-    )
-    parser.add_argument(
-        "--l2-loss-factor",
-        type=float,
-        default=1.0,
-        help="Weighting factor for reconstruction loss.",
-    )
-    parser.add_argument(
-        "--perceptual-loss-factor",
-        type=float,
-        default=1.0,
-        help="Weighting factor for perceptual loss.",
-    )
-
-    parser.add_argument(
-        "--sos-token", type=int, default=0, help="Start of Sentence token."
-    )
-
-    args = parser.parse_args()
-
-    logger = TensorBoardLogger("fs2s_logs", name="seq2seq_model")
-
-    faceseq2seq = FaceSeq2Seq(args)
-
-    data_module = CelebAHQImageTextDataModule(
-        image_size=args.image_size, batch_size=args.batch_size, num_workers=2
-    )
-
-    trainer = pl.Trainer(logger=logger, accelerator="cpu", devices="auto", max_epochs=-1)
-
-    trainer.fit(faceseq2seq, data_module)
