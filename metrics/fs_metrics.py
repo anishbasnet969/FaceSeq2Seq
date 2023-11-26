@@ -22,7 +22,7 @@ class FaceSemanticMetrics(Metric):
             fsd = torch.sum(torch.abs(features_gen - features_real), dim=1)
 
             # Calculate FSS (Face Semantic Similarity)
-            fss = torch.cos(features_gen - features_real)
+            fss = torch.cos(F.pairwise_distance(features_gen - features_real))
 
             # Calculate Cosine Similarity
             cos_sim = F.cosine_similarity(features_gen, features_real)

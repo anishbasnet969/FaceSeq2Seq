@@ -4,8 +4,8 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.strategies import XLAStrategy
 
-from models.vqgan import VQGAN
-from datamodules.img import CelebAHQImageDataModule
+from vqgan import VQGAN
+from datamodules.CelebAHQImages import CelebAHQImagesDataModule
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="VQGAN")
@@ -92,7 +92,7 @@ if __name__ == "__main__":
 
     vqgan = VQGAN(args)
 
-    data_module = CelebAHQImageDataModule(
+    data_module = CelebAHQImagesDataModule(
         image_size=args.image_size, batch_size=args.batch_size, num_workers=2
     )
 

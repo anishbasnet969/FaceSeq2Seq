@@ -4,8 +4,8 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.strategies import XLAStrategy
 
-from models.cf_transformer import CrossFace
-from datamodules.img_txt import CelebAHQImageTextDataModule
+from cf_transformer import CrossFace
+from datamodules.CelebAHQDialog import CelebAHQDialogDataModule
 
 
 if __name__ == "__main__":
@@ -96,7 +96,7 @@ if __name__ == "__main__":
 
     crossface = CrossFace(args)
 
-    data_module = CelebAHQImageTextDataModule(
+    data_module = CelebAHQDialogDataModule(
         image_size=args.image_size, batch_size=args.batch_size, num_workers=2
     )
 

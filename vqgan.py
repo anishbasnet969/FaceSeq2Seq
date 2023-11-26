@@ -1,12 +1,11 @@
-import argparse
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
 
-from modules.encoder import Encoder
-from modules.decoder import Decoder
-from modules.codebook import Codebook
+from encoder import Encoder
+from decoder import Decoder
+from codebook import Codebook
 from discriminator import Discriminator
 from losses.lpips import LPIPS
 from utils import weights_init

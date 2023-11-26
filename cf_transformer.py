@@ -121,6 +121,7 @@ class CrossFace(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         texts, imgs = batch
+        print(imgs)
         logits, target = self(texts, imgs)
         loss = F.cross_entropy(logits.reshape(-1, logits.size(-1)), target.reshape(-1))
         self.log(
