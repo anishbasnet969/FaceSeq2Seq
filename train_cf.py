@@ -4,7 +4,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.strategies import XLAStrategy
 
-from cf_transformer import CrossFace
+from transformer_cf import CrossFace
 from datamodules.CelebAHQDialog import CelebAHQDialogDataModule
 
 

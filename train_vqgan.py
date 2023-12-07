@@ -5,7 +5,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.strategies import XLAStrategy
 
 from vqgan import VQGAN
-from datamodules.CelebAHQImages import CelebAHQImagesDataModule
+from datamodules.Images import ImagesDataModule
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="VQGAN")
@@ -85,14 +85,14 @@ if __name__ == "__main__":
 
     checkpoint_callback = ModelCheckpoint(
         dirpath="vqgan_checkpoints/",
-        filename="vqgan-{epoch:03d}",
+        filename="vqgan_epoch_{epoch:03d}",
         save_top_k=-1,
         every_n_epochs=50,
     )
 
     vqgan = VQGAN(args)
 
-    data_module = CelebAHQImagesDataModule(
+    data_module = ImagesDataModule(
         image_size=args.image_size, batch_size=args.batch_size, num_workers=2
     )
 
@@ -104,6 +104,8 @@ if __name__ == "__main__":
         max_epochs=500,
         precision=16,
     )
+
+    # trainer = pl.Trainer(logger=logger, accelerator="cpu", max_epochs=1)
 
     trainer.fit(vqgan, datamodule=data_module)
     # trainer.fit(vqgan, datamodule=data_module, ckpt_path="path_to_my_checkpoint.ckpt")

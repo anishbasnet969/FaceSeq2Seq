@@ -1,3 +1,5 @@
+from typing import Any
+from pytorch_lightning.utilities.types import STEP_OUTPUT
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -109,17 +111,17 @@ class VQGAN(pl.LightningModule):
             "train/vqloss",
             vq_loss,
             prog_bar=True,
+            logger=True,
             on_step=True,
             on_epoch=True,
-            sync_dist=True,
         )
         self.log(
             "train/discloss",
             disc_loss,
             prog_bar=True,
+            logger=True,
             on_step=True,
             on_epoch=True,
-            sync_dist=True,
         )
         log_dict = {
             "train/vq_loss": vq_loss.clone().detach().mean(),
@@ -141,7 +143,6 @@ class VQGAN(pl.LightningModule):
             logger=True,
             on_step=True,
             on_epoch=True,
-            sync_dist=True,
         )
 
         opt_vq.zero_grad()
@@ -209,14 +210,7 @@ class VQGAN(pl.LightningModule):
             "val/logits_real": logits_real.detach().mean(),
             "val/logits_fake": logits_fake.detach().mean(),
         }
-        self.log_dict(
-            log_dict,
-            prog_bar=False,
-            logger=True,
-            on_step=True,
-            on_epoch=True,
-            sync_dist=True,
-        )
+        self.log_dict(log_dict)
         return self.log_dict
 
     def configure_optimizers(self):

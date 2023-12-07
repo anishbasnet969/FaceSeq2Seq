@@ -2,6 +2,7 @@ import os
 import numpy as np
 import albumentations
 from PIL import Image
+from pytorch_lightning.utilities.types import EVAL_DATALOADERS
 from torch.utils.data import Dataset, DataLoader
 import pytorch_lightning as pl
 
@@ -35,11 +36,11 @@ class ImagePaths(Dataset):
         return example
 
 
-class CelebAHQTrain(Dataset):
+class ImagesTrain(Dataset):
     def __init__(self, size):
         super().__init__()
         root = "dataset\image"
-        with open("data\train.txt", "r") as f:
+        with open(r"data\train.txt", "r") as f:
             relpaths = f.read().splitlines()
         paths = [os.path.join(root, relpath) for relpath in relpaths]
         self.data = ImagePaths(paths=paths, size=size)
@@ -52,11 +53,27 @@ class CelebAHQTrain(Dataset):
         return example
 
 
-class CelebAHQValidation(Dataset):
+class ImagesValidation(Dataset):
     def __init__(self, size):
         super().__init__()
         root = "dataset\image"
-        with open("data\validation.txt", "r") as f:
+        with open(r"data\validation.txt", "r") as f:
+            relpaths = f.read().splitlines()
+        paths = [os.path.join(root, relpath) for relpath in relpaths]
+        self.data = ImagePaths(paths=paths, size=size)
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, i):
+        example = self.data[i]
+        return example
+    
+class ImagesTest(Dataset):
+    def __init__(self, size):
+        super().__init__()
+        root = "dataset\image"
+        with open(r"data\test.txt", "r") as f:
             relpaths = f.read().splitlines()
         paths = [os.path.join(root, relpath) for relpath in relpaths]
         self.data = ImagePaths(paths=paths, size=size)
@@ -69,16 +86,17 @@ class CelebAHQValidation(Dataset):
         return example
 
 
-class CelebAHQImagesDataModule(pl.LightningDataModule):
+class ImagesDataModule(pl.LightningDataModule):
     def __init__(self, batch_size, image_size, num_workers):
         super().__init__()
         self.batch_size = batch_size
         self.num_workers = num_workers
         self.image_size = image_size
 
-    def setup(self, stage):
-        self.train_dataset = CelebAHQTrain(size=self.image_size)
-        self.val_dataset = CelebAHQValidation(size=self.image_size)
+    def setup(self, stage=None):
+        self.train_dataset = ImagesTrain(size=self.image_size)
+        self.val_dataset = ImagesValidation(size=self.image_size)
+        self.test_dataset = ImagesTest(size=self.image_size)
 
     def train_dataloader(self):
         return DataLoader(
@@ -94,4 +112,12 @@ class CelebAHQImagesDataModule(pl.LightningDataModule):
             batch_size=self.batch_size,
             num_workers=self.num_workers,
             shuffle=False,
+        )
+    
+    def test_dataloader(self):
+        return DataLoader(
+            self.test_dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            shuffle=False
         )
