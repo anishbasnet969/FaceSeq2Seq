@@ -102,7 +102,7 @@ if __name__ == "__main__":
     trainer = pl.Trainer(
         logger=logger,
         strategy=XLAStrategy(),
-        devices=32,
+        devices=8,
         callbacks=[checkpoint_callback],
         max_epochs=500,
         precision=16,
