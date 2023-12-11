@@ -39,8 +39,8 @@ class ImagePaths(Dataset):
 class ImagesTrain(Dataset):
     def __init__(self, size):
         super().__init__()
-        root = "dataset\image"
-        with open(r"data\train.txt", "r") as f:
+        root = "MultiModalCelebAHQ/dataset/images"
+        with open(r"data/train.txt", "r") as f:
             relpaths = f.read().splitlines()
         paths = [os.path.join(root, relpath) for relpath in relpaths]
         self.data = ImagePaths(paths=paths, size=size)
@@ -56,8 +56,8 @@ class ImagesTrain(Dataset):
 class ImagesValidation(Dataset):
     def __init__(self, size):
         super().__init__()
-        root = "dataset\image"
-        with open(r"data\validation.txt", "r") as f:
+        root = "MultiModalCelebAHQ/dataset/images"
+        with open(r"data/validation.txt", "r") as f:
             relpaths = f.read().splitlines()
         paths = [os.path.join(root, relpath) for relpath in relpaths]
         self.data = ImagePaths(paths=paths, size=size)
@@ -72,8 +72,8 @@ class ImagesValidation(Dataset):
 class ImagesTest(Dataset):
     def __init__(self, size):
         super().__init__()
-        root = "dataset\image"
-        with open(r"data\test.txt", "r") as f:
+        root = "MultiModalCelebAHQ/dataset/images"
+        with open(r"data/test.txt", "r") as f:
             relpaths = f.read().splitlines()
         paths = [os.path.join(root, relpath) for relpath in relpaths]
         self.data = ImagePaths(paths=paths, size=size)

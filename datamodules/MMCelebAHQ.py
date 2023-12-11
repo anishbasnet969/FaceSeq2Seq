@@ -53,9 +53,9 @@ class ImageTextPaths(Dataset):
 class MMCelebAHQTrain(Dataset):
     def __init__(self, image_size):
         super().__init__()
-        root = "dataset\image"
-        captions_folder = "dataset\text"
-        with open("data\train.txt", "r") as f:
+        root = "MultiModalCelebAHQ/dataset/images"
+        captions_folder = "MultiModalCelebAHQ/dataset/captions/celeba-caption"
+        with open(r"data/train.txt", "r") as f:
             relpaths = f.read().splitlines()
         paths = [os.path.join(root, relpath) for relpath in relpaths]
         self.data = ImageTextPaths(
@@ -71,9 +71,27 @@ class MMCelebAHQTrain(Dataset):
 class MMCelebAHQValidation(Dataset):
     def __init__(self, image_size):
         super().__init__()
-        root = "dataset\image"
-        captions_folder = "dataset\text"
-        with open("data\validation.txt", "r") as f:
+        root = "MultiModalCelebAHQ/dataset/images"
+        captions_folder = "MultiModalCelebAHQ/dataset/captions/celeba-caption"
+        with open(r"data/validation.txt", "r") as f:
+            relpaths = f.read().splitlines()
+        paths = [os.path.join(root, relpath) for relpath in relpaths]
+        self.data = ImageTextPaths(
+            paths=paths, captions_folder=captions_folder, size=image_size
+        )
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, i):
+        return self.data[i]
+    
+class MMCelebAHQValidation(Dataset):
+    def __init__(self, image_size):
+        super().__init__()
+        root = "MultiModalCelebAHQ/dataset/images"
+        captions_folder = "MultiModalCelebAHQ/dataset/captions/celeba-caption"
+        with open(r"data/test.txt", "r") as f:
             relpaths = f.read().splitlines()
         paths = [os.path.join(root, relpath) for relpath in relpaths]
         self.data = ImageTextPaths(
