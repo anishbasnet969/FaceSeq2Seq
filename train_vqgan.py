@@ -84,10 +84,10 @@ if __name__ == "__main__":
     gcs_log_dir = "gs://crossface-bucket/logs"
     gcs_ckpt_dir = "gs://crossface-bucket/checkpoints/vqgan"
 
-    logger = TensorBoardLogger(gcs_log_dir, name="vqgan")
+    logger = TensorBoardLogger("logs/", name="vqgan")
 
     checkpoint_callback = ModelCheckpoint(
-        dirpath=gcs_ckpt_dir,
+        dirpath="checkpoints/vqgan",
         filename="vqgan_epoch_{epoch:03d}",
         save_top_k=-1,
         every_n_epochs=50,
@@ -101,8 +101,8 @@ if __name__ == "__main__":
 
     trainer = pl.Trainer(
         logger=logger,
-        strategy=XLAStrategy(),
-        devices=8,
+        accelerator="tpu",
+        devices="auto",
         callbacks=[checkpoint_callback],
         max_epochs=500,
         precision="bf16-true",

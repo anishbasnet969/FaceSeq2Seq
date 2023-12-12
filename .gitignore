@@ -5,3 +5,5 @@ vgg_lpips/
 .vscode/
 crossface_logs/
 MultiModalCelebAHQ/
+logs/
+checkpoints/
