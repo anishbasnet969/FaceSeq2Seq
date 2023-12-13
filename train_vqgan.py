@@ -108,7 +108,7 @@ if __name__ == "__main__":
         precision="bf16-true",
     )
 
-    # trainer = pl.Trainer(logger=logger, accelerator="cpu", max_epochs=1)
+    # trainer = pl.Trainer(logger=logger, accelerator="gpu", max_epochs=1)
 
     trainer.fit(vqgan, datamodule=data_module)
     # trainer.fit(vqgan, datamodule=data_module, ckpt_path="path_to_my_checkpoint.ckpt")
