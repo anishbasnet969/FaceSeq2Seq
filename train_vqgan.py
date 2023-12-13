@@ -105,7 +105,7 @@ if __name__ == "__main__":
         devices="auto",
         callbacks=[checkpoint_callback],
         max_epochs=500,
-        precision="bf16-true",
+        precision="32-true",
     )
 
     # trainer = pl.Trainer(logger=logger, accelerator="gpu", max_epochs=1)
