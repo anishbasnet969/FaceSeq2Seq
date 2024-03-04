@@ -1,11 +1,8 @@
 import argparse
-import pytorch_lightning as pl
-from pytorch_lightning.loggers import TensorBoardLogger
-from pytorch_lightning.callbacks import ModelCheckpoint
-from pytorch_lightning.strategies import XLAStrategy
-
 from vqgan import VQGAN
+from utils import plot_images
 from datamodules.Images import ImagesDataModule
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="VQGAN")
@@ -48,7 +45,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--learning-rate",
         type=float,
-        default=4.5e-04,
+        default=4.5e-06,
         help="Learning rate",
     )
     parser.add_argument(
@@ -60,7 +57,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--disc-start",
         type=int,
-        default=10000,
+        default=30000,
         help="When to start the discriminator (default: 0)",
     )
     parser.add_argument(
@@ -81,37 +78,20 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    gcs_log_dir = "gs://crossface-bucket/logs"
-    gcs_ckpt_dir = "gs://crossface-bucket/checkpoints/vqgan"
-
-    logger = TensorBoardLogger("logs/", name="vqgan")
-
-    checkpoint_callback = ModelCheckpoint(
-        dirpath="checkpoints/vqgan",
-        filename="vqgan_epoch_{epoch:03d}",
-        save_top_k=-1,
-        every_n_epochs=50,
+    model = VQGAN.load_from_checkpoint(
+        "crossface-e6-30000-1024/vqgan/vqgan_epoch_epoch=499.ckpt", args=args
     )
-
-    vqgan = VQGAN(args)
+    model.eval()
 
     data_module = ImagesDataModule(
         image_size=args.image_size, batch_size=args.batch_size, num_workers=2
     )
+    data_module.setup()
 
-    checkpoint_path = "crossface-e6-30000-1024/vqgan/vqgan_epoch_epoch=499.ckpt"
+    batch = next(iter(data_module.train_dataloader()))
 
-    trainer = pl.Trainer(
-        logger=logger,
-        accelerator="tpu",
-        devices="auto",
-        callbacks=[checkpoint_callback],
-        max_epochs=500,
-        precision="32-true",
-        resume_from_checkpoint=checkpoint_path,
-    )
+    reconstructed_images = model.reconstruct_images(batch)
 
-    # trainer = pl.Trainer(logger=logger, accelerator="gpu", max_epochs=1)
+    images = {"input": batch, "reconstruction": reconstructed_images}
 
-    trainer.fit(vqgan, datamodule=data_module)
-    # trainer.fit(vqgan, datamodule=data_module, ckpt_path="path_to_my_checkpoint.ckpt")
+    plot_images(images)

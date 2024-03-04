@@ -1,5 +1,3 @@
-from typing import Any
-from pytorch_lightning.utilities.types import STEP_OUTPUT
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -232,3 +230,13 @@ class VQGAN(pl.LightningModule):
         )
 
         return [opt_vq, opt_disc]
+
+    def reconstruct_images(self, imgs):
+        with torch.no_grad():
+            encoded_images = self.encoder(imgs)
+            quant_conv_encoded_images = self.quant_conv(encoded_images)
+            codebook_mapping, _, _ = self.codebook(quant_conv_encoded_images)
+            post_quant_conv_mapping = self.post_quant_conv(codebook_mapping)
+            decoded_images = self.decoder(post_quant_conv_mapping)
+
+        return decoded_images

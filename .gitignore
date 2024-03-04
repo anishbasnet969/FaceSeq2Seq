@@ -7,3 +7,7 @@ crossface_logs/
 MultiModalCelebAHQ/
 logs/
 checkpoints/
+crossface-e4-10000-768/
+crossface-e4-10000-1024/
+crossface-e6-30000-768/
+crossface-e6-30000-1024/
