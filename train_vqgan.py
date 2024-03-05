@@ -84,10 +84,10 @@ if __name__ == "__main__":
     gcs_log_dir = "gs://crossface-bucket/logs"
     gcs_ckpt_dir = "gs://crossface-bucket/checkpoints/vqgan"
 
-    logger = TensorBoardLogger("logs/", name="vqgan")
+    logger = TensorBoardLogger("crossface-e6-30000-1024/vqgan/logs/", name="vqgan")
 
     checkpoint_callback = ModelCheckpoint(
-        dirpath="checkpoints/vqgan",
+        dirpath="crossface-e6-30000-1024/vqgan",
         filename="vqgan_epoch_{epoch:03d}",
         save_top_k=-1,
         every_n_epochs=50,
