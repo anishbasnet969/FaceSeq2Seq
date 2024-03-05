@@ -93,7 +93,9 @@ if __name__ == "__main__":
         every_n_epochs=50,
     )
 
-    vqgan = VQGAN(args)
+    vqgan = VQGAN.load_from_checkpoint(
+        "crossface-e6-30000-1024/vqgan/vqgan_epoch_epoch=499.ckpt", args=args
+    )
 
     data_module = ImagesDataModule(
         image_size=args.image_size, batch_size=args.batch_size, num_workers=2
@@ -108,7 +110,6 @@ if __name__ == "__main__":
         callbacks=[checkpoint_callback],
         max_epochs=1500,
         precision="32-true",
-        resume_from_checkpoint=checkpoint_path,
     )
 
     # trainer = pl.Trainer(logger=logger, accelerator="gpu", max_epochs=1)
