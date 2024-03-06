@@ -84,7 +84,7 @@ if __name__ == "__main__":
     gcs_log_dir = "gs://crossface-bucket/logs"
     gcs_ckpt_dir = "gs://crossface-bucket/checkpoints/vqgan"
 
-    logger = TensorBoardLogger("crossface-e6-30000-1024/vqgan/logs/", name="vqgan")
+    logger = TensorBoardLogger("crossface-e6-30000-1024/vqgan/", name="logs")
 
     checkpoint_callback = ModelCheckpoint(
         dirpath="crossface-e6-30000-1024/vqgan",
@@ -93,15 +93,17 @@ if __name__ == "__main__":
         every_n_epochs=50,
     )
 
-    vqgan = VQGAN.load_from_checkpoint(
-        "crossface-e6-30000-1024/vqgan/vqgan_epoch_epoch=499.ckpt", args=args
-    )
+    # vqgan = VQGAN.load_from_checkpoint(
+    #     "crossface-e6-30000-1024/vqgan/vqgan_epoch_epoch=499.ckpt", args=args
+    # )
+
+    vqgan = VQGAN(args)
 
     data_module = ImagesDataModule(
         image_size=args.image_size, batch_size=args.batch_size, num_workers=2
     )
 
-    checkpoint_path = "crossface-e6-30000-1024/vqgan/vqgan_epoch_epoch=499.ckpt"
+    # checkpoint_path = "crossface-e6-30000-1024/vqgan/vqgan_epoch_epoch=499.ckpt"
 
     trainer = pl.Trainer(
         logger=logger,
