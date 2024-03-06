@@ -110,7 +110,7 @@ if __name__ == "__main__":
         accelerator="tpu",
         devices="auto",
         callbacks=[checkpoint_callback],
-        max_epochs=1500,
+        max_epochs=800,
         precision="32-true",
     )
 
