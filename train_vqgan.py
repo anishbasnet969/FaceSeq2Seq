@@ -48,7 +48,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--learning-rate",
         type=float,
-        default=4.5e-04,
+        default=4.5e-06,
         help="Learning rate",
     )
     parser.add_argument(
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--disc-start",
         type=int,
-        default=10000,
+        default=30000,
         help="When to start the discriminator (default: 0)",
     )
     parser.add_argument(
