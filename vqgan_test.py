@@ -39,7 +39,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=2,
+        default=8,
         help="Input batch size for training (default: 4)",
     )
     parser.add_argument(
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     )
     data_module.setup()
 
-    batch = next(iter(data_module.train_dataloader()))
+    batch = next(iter(data_module.test_dataloader()))
 
     reconstructed_images = model.reconstruct_images(batch)
 

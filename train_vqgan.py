@@ -42,7 +42,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=2,
+        default=4,
         help="Input batch size for training (default: 4)",
     )
     parser.add_argument(
@@ -84,10 +84,10 @@ if __name__ == "__main__":
     gcs_log_dir = "gs://crossface-bucket/logs"
     gcs_ckpt_dir = "gs://crossface-bucket/checkpoints/vqgan"
 
-    logger = TensorBoardLogger("crossface-768z-8b/vqgan/", name="logs")
+    logger = TensorBoardLogger("crossface-768z-16b-ch/vqgan/", name="logs")
 
     checkpoint_callback = ModelCheckpoint(
-        dirpath="crossface-768z-8b/vqgan",
+        dirpath="crossface-768z-16b-ch/vqgan",
         filename="vqgan_epoch_{epoch:03d}",
         save_top_k=-1,
         every_n_epochs=50,
