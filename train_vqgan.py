@@ -98,7 +98,7 @@ if __name__ == "__main__":
         filename="best",
         save_top_k=1,
         save_last=True,
-        monitor="val_loss",
+        monitor="val/vqloss",
         mode="min",
     )
 
