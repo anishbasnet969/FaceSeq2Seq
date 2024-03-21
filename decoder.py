@@ -5,7 +5,8 @@ from helper import ResidualBlock, NonLocalBlock, UpSampleBlock, GroupNorm, Swish
 class Decoder(nn.Module):
     def __init__(self, args):
         super(Decoder, self).__init__()
-        channels = [1024, 512, 256, 128, 128]
+        # channels = [1024, 512, 256, 128, 128]
+        channels = [512, 256, 256, 128, 128]
         attn_resolutions = [16]
         num_res_blocks = 3
         resolution = 16

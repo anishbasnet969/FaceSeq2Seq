@@ -9,7 +9,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--latent-dim",
         type=int,
-        default=1024,
+        default=256,
         help="Latent dimension n_z (for compatibility with roberta large hidden dim: 1024).",
     )
     parser.add_argument(
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=8,
+        default=4,
         help="Input batch size for training (default: 4)",
     )
     parser.add_argument(
@@ -78,9 +78,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    model = VQGAN.load_from_checkpoint(
-        "crossface-e6-30000-1024/vqgan/vqgan_epoch_epoch=499.ckpt", args=args
-    )
+    model = VQGAN.load_from_checkpoint("crossface-1024z-8b/vqgan/last.ckpt", args=args)
     model.eval()
 
     data_module = ImagesDataModule(
