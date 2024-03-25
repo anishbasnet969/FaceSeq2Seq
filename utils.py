@@ -20,6 +20,6 @@ def plot_images(images):
     # print(x[0].cpu().detach().numpy()[0].shape)
     # print(reconstruction[0].cpu().detach().numpy()[0].shape)
 
-    ax[0].imshow(x.cpu().detach().numpy()[4].transpose(1, 2, 0))
-    ax[1].imshow(reconstruction.cpu().detach().numpy()[4].transpose(1, 2, 0))
+    ax[0].imshow(x.cpu().detach().numpy()[1].transpose(1, 2, 0))
+    ax[1].imshow(reconstruction.cpu().detach().numpy()[1].transpose(1, 2, 0))
     plt.show()

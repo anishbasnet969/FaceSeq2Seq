@@ -10,7 +10,7 @@ if __name__ == "__main__":
         "--latent-dim",
         type=int,
         default=256,
-        help="Latent dimension n_z (for compatibility with roberta large hidden dim: 1024).",
+        help="Latent dimension n_z",
     )
     parser.add_argument(
         "--image-size",
@@ -78,7 +78,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    model = VQGAN.load_from_checkpoint("crossface-1024z-8b/vqgan/last.ckpt", args=args)
+    model = VQGAN.load_from_checkpoint("crossface-256z-16b/vqgan/last.ckpt", args=args)
     model.eval()
 
     data_module = ImagesDataModule(
