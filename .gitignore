@@ -7,3 +7,6 @@ crossface_logs/
 MultiModalCelebAHQ/
 logs/
 checkpoints/
+crossface-256z-16b-e6/
+crossface-256z-16b-e5/
+crossface-256z-16b-e4/
