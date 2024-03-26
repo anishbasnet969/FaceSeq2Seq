@@ -84,7 +84,7 @@ if __name__ == "__main__":
     # gcs_log_dir = "gs://crossface-bucket/logs"
     # gcs_ckpt_dir = "gs://crossface-bucket/checkpoints/vqgan"
 
-    logger = TensorBoardLogger("crossface-256z-16b/vqgan/", name="logs")
+    logger = TensorBoardLogger("crossface-256z-16b-e6/vqgan/", name="logs")
 
     # checkpoint_callback = ModelCheckpoint(
     #     dirpath="crossface-768z-16b-ch/vqgan",
@@ -94,7 +94,7 @@ if __name__ == "__main__":
     # )
 
     checkpoint_callback = ModelCheckpoint(
-        dirpath="crossface-256z-16b/vqgan",
+        dirpath="crossface-256z-16b-e6/vqgan",
         filename="best",
         save_top_k=1,
         save_last=True,
